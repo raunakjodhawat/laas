@@ -1,12 +1,10 @@
-package repository
+package repositories
 
 import models.{PasswordResetOTP, PhoneNumber}
 import slick.jdbc.PostgresProfile.api.*
-
-import java.text.SimpleDateFormat
+import utility.Utils.simpleDateFormat
 
 object RepositoryUtility {
-  private val simpleDateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
   given phoneNumberType: BaseColumnType[Option[PhoneNumber]] =
     MappedColumnType.base[Option[PhoneNumber], String](
       _.map(p => s"${p.countryCode}-${p.number}").getOrElse(""),

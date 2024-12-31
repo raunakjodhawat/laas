@@ -1,11 +1,10 @@
-package repository
+package repositories
 
 import interfaces.UserRepository
-import models.{PhoneNumber, User, UsersTable}
+import models.user.{CreateUserRequest, CreateUserResponse, User, UsersTable}
+import models.PhoneNumber
 import slick.jdbc.PostgresProfile.api.*
 import slick.lifted.Tag
-
-import java.util.UUID
 import zio.*
 
 object UserRepository {
@@ -14,7 +13,7 @@ object UserRepository {
 
 class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepository {
   import UserRepository.users
-  override def getUserById(id: UUID): ZIO[Database, Throwable, Option[UsersTable#TableElementType]] = for {
+  override def getUserById(id: Long): ZIO[Database, Throwable, Option[UsersTable#TableElementType]] = for {
     db <- dbZIO
     user <- ZIO.fromFuture { ex => db.run(users.filter(x => x.id === id).result.headOption) }
     _ <- ZIO.from(db.close())
@@ -43,11 +42,14 @@ class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepos
     _ <- ZIO.from(db.close())
   } yield user
 
-  override def createUser(user: User): ZIO[Database, Throwable, UsersTable#TableElementType] = for {
-    db <- dbZIO
-    _ <- ZIO.fromFuture { ex => db.run(users += user) }
-    _ <- ZIO.from(db.close())
-  } yield user
+  override def createUser(incomingUser: CreateUserRequest): ZIO[Database, Throwable, CreateUserResponse] = {
+    val user = incomingUser.toUser
+    for {
+      db <- dbZIO
+      _ <- ZIO.fromFuture { ex => db.run(users += user) }
+      _ <- ZIO.from(db.close())
+    } yield User.toExternalUser(user)
+  }
 
   override def updateUser(user: User): ZIO[Database, Throwable, UsersTable#TableElementType] = for {
     db <- dbZIO
@@ -55,7 +57,7 @@ class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepos
     _ <- ZIO.from(db.close())
   } yield user
 
-  override def deleteUser(id: UUID): ZIO[Database, Throwable, Unit] = for {
+  override def deleteUser(id: Long): ZIO[Database, Throwable, Unit] = for {
     db <- dbZIO
     _ <- ZIO.fromFuture { ex => db.run(users.filter(x => x.id === id).delete) }
     _ <- ZIO.from(db.close())
