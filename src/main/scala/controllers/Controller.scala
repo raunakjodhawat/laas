@@ -11,6 +11,9 @@ class Controller(db: ZIO[Any, Throwable, Database]) {
   val routes: Routes[Database, Nothing] = Routes(
     Method.POST / "api" / "v1" / "user" -> handler { (req: Request) =>
       uc.createUser(req.body)
+    },
+    Method.GET / "api" / "v1" / "authenticate" -> handler { (req: Request) =>
+      uc.authenticate(req.headers)
     }
   )
 }

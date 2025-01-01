@@ -17,8 +17,7 @@ object User {
     CreateUserResponse(
       username = user.username,
       email = user.email,
-      phone = user.phone,
-      password_hash = user.password_hash
+      phone = user.phone
     )
   }
 }

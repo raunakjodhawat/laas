@@ -19,6 +19,20 @@ class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepos
     _ <- ZIO.from(db.close())
   } yield user
 
+  def getUserByLoginId(loginId: String): ZIO[Database, Throwable, UsersTable#TableElementType] = {
+    for {
+      db <- dbZIO
+      user <- ZIO.fromFuture { ex =>
+        db.run(
+          users
+            .filter(x => x.email === loginId || x.username === loginId || x.phone.toString == loginId)
+            .result
+            .headOption
+        )
+      }
+      _ <- ZIO.from(db.close())
+    } yield user.fold(throw new Exception("User not found"))(x => x)
+  }
   override def getUserByEmail(email: String): ZIO[Database, Throwable, Option[UsersTable#TableElementType]] = for {
     db <- dbZIO
     user <- ZIO.fromFuture { ex => db.run(users.filter(x => x.email === email).result.headOption) }

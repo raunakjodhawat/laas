@@ -8,11 +8,7 @@ object RepositoryUtility {
   given phoneNumberType: BaseColumnType[Option[PhoneNumber]] =
     MappedColumnType.base[Option[PhoneNumber], String](
       _.map(p => s"${p.countryCode}-${p.number}").getOrElse(""),
-      s => {
-        val parts = s.split("-")
-        if (parts.length == 2) Some(PhoneNumber(parts(0).toInt, parts(1).toLong))
-        else None
-      }
+      s => Option(PhoneNumber.fromString(s))
     )
 
   given passwordResetOptionType: BaseColumnType[Option[PasswordResetOTP]] =

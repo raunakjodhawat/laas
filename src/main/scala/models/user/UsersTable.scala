@@ -9,9 +9,9 @@ import slick.lifted.{ProvenShape, Tag}
 
 class UsersTable(tag: Tag) extends Table[User](tag, "users") {
   def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def username = column[Option[String]]("username")
+  def username = column[Option[String]]("username", O.Default(None))
   def email = column[String]("email", O.Unique)
-  def phone = column[Option[PhoneNumber]]("phone_number")
+  def phone = column[Option[PhoneNumber]]("phone_number", O.Default(None))
   def salt = column[String]("salt")
   def passwordResetOTP = column[Option[PasswordResetOTP]]("password_reset_otp")
   def passwordHash = column[String]("password_hash")

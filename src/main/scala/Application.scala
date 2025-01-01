@@ -14,6 +14,7 @@ object DatabaseConfiguration {
       {
         db.run(
           DBIO.seq(
+            users.schema.dropIfExists,
             users.schema.createIfNotExists,
             UsersTable.createPartialIndexes(db)
           )
