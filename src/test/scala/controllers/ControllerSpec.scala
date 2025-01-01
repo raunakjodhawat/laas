@@ -65,6 +65,32 @@ class ControllerSpec extends JUnitRunnableSpec {
           } yield assert(response.status)(equalTo(Status.Ok))
         })
         .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
+    },
+    test("create user with existing username and email") {
+      val user1 = CreateUserRequest(email = "user3@example.com", password = "password1", username = Some("username1"))
+      val user2 = CreateUserRequest(email = "user1@example.com", password = "password1")
+      val user3 = CreateUserRequest(email = "user1@example.com", password = "password1", username = Some("username1"))
+      val controller = new Controller(test_dbZIO)
+      val requests = List(
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user1.toJson)),
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user2.toJson)),
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user3.toJson))
+      )
+      requests
+        .map(request => {
+          for {
+            response <- controller.routes(request)
+          } yield assert(response.status)(equalTo(Status.BadRequest))
+        })
+        .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
+    },
+    test("authenticate the user with wrong password") {
+      val controller = new Controller(test_dbZIO)
+      val headers = dbUtility.createAuthenticationHeader("user1@example.com", "password123")
+      val request = Request(method = Method.GET, url = URL.root / "api" / "v1" / "authenticate", headers = headers)
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.Unauthorized))
     }
   ).provide(ZLayer.fromZIO(test_dbZIO)) @@ TestAspect.sequential @@ TestAspect.timed
 }

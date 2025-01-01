@@ -21,7 +21,7 @@ class UserController(userRepository: UserRepositoryImpl) {
           userRepository.createUser(incomingUser)
       }
       .fold(
-        error => Response.text(s"Error creating user: $error"),
+        error => Response.error(Status.BadRequest, s"Error creating user: $error"),
         outgoingUser => Response.json(outgoingUser.toJson)
       )
   }
