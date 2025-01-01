@@ -1,4 +1,4 @@
-FROM apluslms/grade-scala:scala3-2.13-4.2
+FROM sbtscala/scala-sbt:graalvm-community-22.0.1_1.10.7_3.6.2
 
 WORKDIR /app
 COPY . .
