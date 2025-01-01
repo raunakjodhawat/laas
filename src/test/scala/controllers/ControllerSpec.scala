@@ -1,9 +1,8 @@
 package controllers
 
-import controllers.Controller
-import models.user.{CreateUserRequest, CreateUserResponse, User}
+import models.user.{CreateUserRequest, CreateUserResponse}
 import org.junit.runner.RunWith
-import repositories.UserRepositoryImpl
+import repositories.UserRepository
 import slick.jdbc
 import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api.*
@@ -22,7 +21,7 @@ import scala.util.Properties
 object ControllerSpec {
   val test_dbZIO: Task[PostgresProfile.backend.JdbcDatabaseDef] =
     ZIO.attempt(Database.forConfig(Properties.envOrElse("DBPATH", "postgres-test-local")))
-  val userRepository = new UserRepositoryImpl(test_dbZIO)
+  val userRepository = new UserRepository(test_dbZIO)
 }
 
 @RunWith(classOf[ZTestJUnitRunner])
@@ -87,6 +86,29 @@ class ControllerSpec extends JUnitRunnableSpec {
     test("authenticate the user with wrong password") {
       val controller = new Controller(test_dbZIO)
       val headers = dbUtility.createAuthenticationHeader("user1@example.com", "password123")
+      val request = Request(method = Method.GET, url = URL.root / "api" / "v1" / "authenticate", headers = headers)
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.Unauthorized))
+    },
+    test("create user with incorrect body") {
+      val controller = new Controller(test_dbZIO)
+      val request =
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString("incorrect body"))
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.BadRequest))
+    },
+    test("authenticate the user with incorrect header") {
+      val controller = new Controller(test_dbZIO)
+      val request = Request(method = Method.GET, url = URL.root / "api" / "v1" / "authenticate")
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.BadRequest))
+    },
+    test("authenticate with non-existent user") {
+      val controller = new Controller(test_dbZIO)
+      val headers = dbUtility.createAuthenticationHeader("somerandome@email.com", "somepassword")
       val request = Request(method = Method.GET, url = URL.root / "api" / "v1" / "authenticate", headers = headers)
       for {
         response <- controller.routes(request)

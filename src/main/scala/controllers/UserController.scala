@@ -1,6 +1,6 @@
 package controllers
 
-import repositories.UserRepositoryImpl
+import repositories.UserRepository
 import zio.ZIO
 import zio.http.{Body, Headers, Response, Status}
 import slick.jdbc.PostgresProfile.api.*
@@ -11,7 +11,7 @@ import utility.Utils.generatePasswordHash
 
 import java.util.Base64
 
-class UserController(userRepository: UserRepositoryImpl) {
+class UserController(userRepository: UserRepository) {
   def createUser(body: Body): ZIO[Database, Nothing, Response] = {
     body.asString
       .map(_.fromJson[CreateUserRequest])

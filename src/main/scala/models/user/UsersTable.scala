@@ -1,6 +1,5 @@
 package models.user
 
-import models.user.User
 import models.PasswordResetOTP
 import repositories.RepositoryUtility.given
 import slick.ast.TypedType

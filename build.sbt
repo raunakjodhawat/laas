@@ -25,3 +25,15 @@ libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.3" % Test
 
 testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+
+coverageExcludedPackages := "Application,DatabaseConfiguration"
+coverageEnabled := true
+// Coverage settings
+coverageHighlighting := true
+coverageFailOnMinimum := false
+coverageMinimumStmtTotal := 70
+coverageMinimumBranchTotal := 70
+coverageMinimumStmtPerPackage := 70
+coverageMinimumBranchPerPackage := 70
+coverageMinimumStmtPerFile := 70
+coverageMinimumBranchPerFile := 70
