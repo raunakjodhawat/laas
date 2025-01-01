@@ -6,10 +6,6 @@ import slick.jdbc.PostgresProfile
 import zio.{Task, ZIO}
 import slick.jdbc.PostgresProfile.api.*
 import zio.http.*
-import zio.test.*
-import zio.test.Assertion.*
-
-import scala.util.Properties
 
 object dbUtility {
   val test_users = TableQuery[UsersTable]
