@@ -2,7 +2,7 @@ package controllers
 
 import repositories.UserRepositoryImpl
 import zio.ZIO
-import zio.http.{Body, Header, Headers, Response, Status}
+import zio.http.{Body, Headers, Response, Status}
 import slick.jdbc.PostgresProfile.api.*
 import zio.json.*
 import models.ModelsUtility.given
@@ -37,15 +37,12 @@ class UserController(userRepository: UserRepositoryImpl) {
       case Some(credentials) if credentials.length == 2 =>
         val loginId = credentials(0)
         val incomingPassword = credentials(1)
-        println(loginId)
         userRepository
           .getUserByLoginId(loginId)
           .fold(
             _ => Response.error(Status.Unauthorized, "User not authenticated"),
             user => {
               val generatedHash = generatePasswordHash(user.salt, incomingPassword)
-              println(generatedHash)
-              println(user.password_hash)
               if (generatedHash == user.password_hash) {
                 Response.ok
               } else {

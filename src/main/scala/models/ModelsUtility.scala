@@ -11,8 +11,7 @@ object ModelsUtility {
 
   given passwordResetOTPDecoder: JsonDecoder[PasswordResetOTP] = DeriveJsonDecoder.gen[PasswordResetOTP]
   given passwordResetOTPEncoder: JsonEncoder[PasswordResetOTP] = DeriveJsonEncoder.gen[PasswordResetOTP]
-  given phoneNumberDecoder: JsonDecoder[PhoneNumber] = DeriveJsonDecoder.gen[PhoneNumber]
-  given phoneNumberEncoder: JsonEncoder[PhoneNumber] = DeriveJsonEncoder.gen[PhoneNumber]
+
   given userDecoder: JsonDecoder[User] = DeriveJsonDecoder.gen[User]
   given userEncoder: JsonEncoder[User] = DeriveJsonEncoder.gen[User]
 
