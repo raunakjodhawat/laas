@@ -6,7 +6,7 @@ A small microservice that handles:
 3. Forgot password (Password reset)
 
 ### Features
-- A user can sign up/login using username, email or phone number.
+- A user can sign up/login using username, email.
 - 
 ### Tech Stack
 1. Scala 3.x with ZIO (Http, JSON)

@@ -23,9 +23,4 @@ object Utils {
     val digest = md.digest(saltedPassword.getBytes)
     digest.map("%02x".format(_)).mkString
   }
-
-  def isValidPassword(salt: String, password: String, passwordHash: String): Boolean = {
-    val generatedHash = generatePasswordHash(salt, password)
-    generatedHash == passwordHash
-  }
 }

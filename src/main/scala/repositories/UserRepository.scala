@@ -2,7 +2,6 @@ package repositories
 
 import interfaces.UserRepository
 import models.user.{CreateUserRequest, CreateUserResponse, User, UsersTable}
-import models.PhoneNumber
 import slick.jdbc.PostgresProfile.api.*
 import slick.lifted.Tag
 import zio.*
@@ -25,7 +24,7 @@ class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepos
       user <- ZIO.fromFuture { ex =>
         db.run(
           users
-            .filter(x => x.email === loginId || x.username === loginId || x.phone.toString == loginId)
+            .filter(x => x.email === loginId || x.username === loginId)
             .result
             .headOption
         )
@@ -45,16 +44,6 @@ class UserRepositoryImpl(dbZIO: ZIO[Any, Throwable, Database]) extends UserRepos
       user <- ZIO.fromFuture { ex => db.run(users.filter(x => x.username === username).result.headOption) }
       _ <- ZIO.from(db.close())
     } yield user
-
-  override def getUserByPhoneNumber(
-    phoneNumber: PhoneNumber
-  ): ZIO[Database, Throwable, Option[UsersTable#TableElementType]] = for {
-    db <- dbZIO
-    user <- ZIO.fromFuture { ex =>
-      db.run(users.filter(x => x.phone == phoneNumber).result.headOption)
-    }
-    _ <- ZIO.from(db.close())
-  } yield user
 
   override def createUser(incomingUser: CreateUserRequest): ZIO[Database, Throwable, CreateUserResponse] = {
     val user = incomingUser.toUser
