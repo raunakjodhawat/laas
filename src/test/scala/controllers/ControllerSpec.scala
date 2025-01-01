@@ -1,5 +1,7 @@
+package controllers
+
 import controllers.Controller
-import models.user.{CreateUserRequest, CreateUserResponse}
+import models.user.{CreateUserRequest, CreateUserResponse, User}
 import org.junit.runner.RunWith
 import repositories.UserRepositoryImpl
 import slick.jdbc
@@ -8,30 +10,44 @@ import slick.jdbc.PostgresProfile.api.*
 import testUtility.dbUtility
 import zio.*
 import zio.http.*
+import zio.json.*
+import models.ModelsUtility.given
+
 import zio.http.{Headers, Method, Request, Status, URL}
 import zio.test.{assert, *}
 import zio.test.Assertion.*
 import zio.test.junit.{JUnitRunnableSpec, ZTestJUnitRunner}
 
 import scala.util.Properties
-object E2ESpec {
+object ControllerSpec {
   val test_dbZIO: Task[PostgresProfile.backend.JdbcDatabaseDef] =
     ZIO.attempt(Database.forConfig(Properties.envOrElse("DBPATH", "postgres-test-local")))
   val userRepository = new UserRepositoryImpl(test_dbZIO)
 }
+
 @RunWith(classOf[ZTestJUnitRunner])
-class E2ESpec extends JUnitRunnableSpec {
-  import E2ESpec._
-  def spec = suite("E2E tests")(
-    test("create four users with email and password") {
-      for {
-        _ <- dbUtility.clearDB(test_dbZIO)
-        user1 = CreateUserRequest(email = "user1@example.com", password = "password1")
-        user2 = CreateUserRequest(email = "user2@example.com", password = "password2", username = Some("username1"))
-        response1 <- userRepository.createUser(user1)
-        response2 <- userRepository.createUser(user2)
-      } yield assert(response1)(equalTo(CreateUserResponse(email = "user1@example.com"))) &&
-        assert(response2)(equalTo(CreateUserResponse(email = "user2@example.com", username = Some("username1"))))
+class ControllerSpec extends JUnitRunnableSpec {
+  import ControllerSpec._
+  def spec = suite("ControllerSpec")(
+    test("create two users with email and password") {
+      val user1 = CreateUserRequest(email = "user1@example.com", password = "password1")
+      val user2 = CreateUserRequest(email = "user2@example.com", password = "password2", username = Some("username1"))
+      val controller = new Controller(test_dbZIO)
+      val requests = List(
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user1.toJson)),
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user2.toJson))
+      )
+      val responses = List(
+        CreateUserResponse(user1.username, user1.email),
+        CreateUserResponse(user2.username, user2.email)
+      )
+      dbUtility.clearDB(test_dbZIO) *> requests.zipWithIndex
+        .map((request, index) => {
+          for {
+            response <- controller.routes(request)
+          } yield assert(response.body)(equalTo(Body.fromString(responses(index).toJson)))
+        })
+        .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
     },
     test("authenticate the two user with username, email and password combination") {
       val headers = List(

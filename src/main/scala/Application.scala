@@ -35,11 +35,6 @@ object Application extends ZIOAppDefault {
   import DatabaseConfiguration._
 
   private val routes: Routes[Database, Nothing] = new Controller(dbZIO).routes
-//  private val routes: Routes[Database, Nothing] = Routes(
-//    Method.GET / "api" / "v1" / "user" -> handler { (req: Request) =>
-//      ZIO.succeed(Response.text("Hello, World!"))
-//    }
-//  )
-  override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] =
+  override def run: ZIO[ZIOAppArgs & Scope, Any, Any] =
     initializeDB *> Server.serve(routes).provide(Server.default, ZLayer.fromZIO(dbZIO))
 }

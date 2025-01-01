@@ -19,3 +19,9 @@ libraryDependencies += "dev.zio" %% "zio-test" % zioVersion % Test
 libraryDependencies += "dev.zio" %% "zio-test-sbt" % zioVersion % Test
 libraryDependencies += "dev.zio" %% "zio-test-magnolia" % zioVersion % Test
 libraryDependencies += "dev.zio" %% "zio-test-junit" % zioVersion % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test
+libraryDependencies += "org.scalatestplus" %% "junit-4-13" % "3.2.19.0" % Test
+libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.3" % Test
+
+testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v")
+testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
