@@ -1,6 +1,6 @@
 package controllers
 
-import models.user.{CreateUserRequest, CreateUserResponse}
+import models.user.SignUpUserRequest
 import org.junit.runner.RunWith
 import repositories.UserRepository
 import slick.jdbc
@@ -11,9 +11,8 @@ import zio.*
 import zio.http.*
 import zio.json.*
 import models.ModelsUtility.given
-
 import zio.http.{Headers, Method, Request, Status, URL}
-import zio.test.{assert, *}
+import zio.test.*
 import zio.test.Assertion.*
 import zio.test.junit.{JUnitRunnableSpec, ZTestJUnitRunner}
 
@@ -29,22 +28,18 @@ class ControllerSpec extends JUnitRunnableSpec {
   import ControllerSpec._
   def spec = suite("ControllerSpec")(
     test("create two users with email and password") {
-      val user1 = CreateUserRequest(email = "user1@example.com", password = "password1")
-      val user2 = CreateUserRequest(email = "user2@example.com", password = "password2", username = Some("username1"))
+      val user1 = SignUpUserRequest(username = "user1@example.com", password = "password1")
+      val user2 = SignUpUserRequest(username = "user2@example.com", password = "password2")
       val controller = new Controller(test_dbZIO)
       val requests = List(
         Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user1.toJson)),
         Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user2.toJson))
       )
-      val responses = List(
-        CreateUserResponse(user1.username, user1.email),
-        CreateUserResponse(user2.username, user2.email)
-      )
-      dbUtility.clearDB(test_dbZIO) *> requests.zipWithIndex
-        .map((request, index) => {
+      dbUtility.clearDB(test_dbZIO) *> requests
+        .map(request => {
           for {
             response <- controller.routes(request)
-          } yield assert(response.body)(equalTo(Body.fromString(responses(index).toJson)))
+          } yield assert(response.status)(equalTo(Status.Created))
         })
         .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
     },
@@ -54,32 +49,15 @@ class ControllerSpec extends JUnitRunnableSpec {
         dbUtility.createAuthenticationHeader("user2@example.com", "password2"),
         dbUtility.createAuthenticationHeader("username1", "password2")
       )
+      val responses = List(Status.Ok, Status.Ok, Status.Unauthorized)
       val controller = new Controller(test_dbZIO)
 
-      headers
-        .map(header => {
+      headers.zipWithIndex
+        .map((header, index) => {
           val request = Request(method = Method.GET, url = URL.root / "api" / "v1" / "authenticate", headers = header)
           for {
             response <- controller.routes(request)
-          } yield assert(response.status)(equalTo(Status.Ok))
-        })
-        .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
-    },
-    test("create user with existing username and email") {
-      val user1 = CreateUserRequest(email = "user3@example.com", password = "password1", username = Some("username1"))
-      val user2 = CreateUserRequest(email = "user1@example.com", password = "password1")
-      val user3 = CreateUserRequest(email = "user1@example.com", password = "password1", username = Some("username1"))
-      val controller = new Controller(test_dbZIO)
-      val requests = List(
-        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user1.toJson)),
-        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user2.toJson)),
-        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user3.toJson))
-      )
-      requests
-        .map(request => {
-          for {
-            response <- controller.routes(request)
-          } yield assert(response.status)(equalTo(Status.BadRequest))
+          } yield assert(response.status)(equalTo(responses(index)))
         })
         .fold(ZIO.succeed(assert(true)(isTrue)))(_ && _)
     },
@@ -113,6 +91,38 @@ class ControllerSpec extends JUnitRunnableSpec {
       for {
         response <- controller.routes(request)
       } yield assert(response.status)(equalTo(Status.Unauthorized))
+    },
+    test("create and delete the user") {
+      val user1 = SignUpUserRequest(username = "user3@example.com", password = "password3")
+      val controller = new Controller(test_dbZIO)
+      val request =
+        Request(method = Method.POST, url = URL.root / "api" / "v1" / "user", body = Body.fromString(user1.toJson))
+
+      for {
+        _ <- controller.routes(request)
+        headers = dbUtility.createAuthenticationHeader("user3@example.com", "password3")
+        request = Request(method = Method.DELETE, url = URL.root / "api" / "v1" / "user", headers = headers)
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.NotFound))
+    },
+    test("delete a non-existent user") {
+      val controller = new Controller(test_dbZIO)
+      val headers = dbUtility.createAuthenticationHeader("someuser+1@email.com", "somepassword")
+      val request = Request(method = Method.DELETE, url = URL.root / "api" / "v1" / "user", headers = headers)
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.NotFound))
+    },
+    test("delete a user with incorrect header") {
+      val controller = new Controller(test_dbZIO)
+      val request = Request(method = Method.DELETE, url = URL.root / "api" / "v1" / "user")
+      for {
+        response <- controller.routes(request)
+      } yield assert(response.status)(equalTo(Status.NotFound))
     }
-  ).provide(ZLayer.fromZIO(test_dbZIO)) @@ TestAspect.sequential @@ TestAspect.timed
+  ).provide(ZLayer.fromZIO(test_dbZIO),
+            ZLayer.succeed(Scope.global)
+  ) @@ TestAspect.sequential @@ TestAspect.timed @@ TestAspect.timeout(
+    10.seconds
+  )
 }

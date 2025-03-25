@@ -19,8 +19,7 @@ object dbUtility {
           db.run(
             DBIO.seq(
               test_users.schema.dropIfExists,
-              test_users.schema.create,
-              UsersTable.createPartialIndexes(db)
+              test_users.schema.create
             )
           )
         }
