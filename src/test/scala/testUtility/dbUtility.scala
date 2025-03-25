@@ -6,10 +6,6 @@ import slick.jdbc.PostgresProfile
 import zio.{Task, ZIO}
 import slick.jdbc.PostgresProfile.api.*
 import zio.http.*
-import zio.test.*
-import zio.test.Assertion.*
-
-import scala.util.Properties
 
 object dbUtility {
   val test_users = TableQuery[UsersTable]
@@ -23,8 +19,7 @@ object dbUtility {
           db.run(
             DBIO.seq(
               test_users.schema.dropIfExists,
-              test_users.schema.create,
-              UsersTable.createPartialIndexes(db)
+              test_users.schema.create
             )
           )
         }
