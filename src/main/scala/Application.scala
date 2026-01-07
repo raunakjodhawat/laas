@@ -1,39 +1,61 @@
 import controllers.Controller
-import models.user.UsersTable
-import zio.{Exit, Scope, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
+import org.flywaydb.core.Flyway
+import zio.{ConfigProvider, Exit, Runtime, Scope, Task, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer}
 import slick.jdbc.PostgresProfile.api.*
+import utility.FlywayConfig
 import zio.http.*
+import zio.config.*
+import zio.config.magnolia.*
+import zio.config.typesafe.TypesafeConfigProvider
+
+object FlywayConfigLayer {
+
+  private val descriptor =
+    deriveConfig[FlywayConfig].nested("flyway")
+
+  val live: ZLayer[Any, Throwable, FlywayConfig] =
+    ZLayer.fromZIO {
+      ZIO.config(descriptor)
+    }
+}
 
 object DatabaseConfiguration {
-  val dbZIO: ZIO[Any, Throwable, Database] = ZIO.attempt(Database.forConfig("postgres"))
-  val users = TableQuery[UsersTable]
 
-  def initializeDB: ZIO[Any, Throwable, Database] = (for {
-    db <- dbZIO
-    updateFork <- ZIO.fromFuture { ex =>
-      {
-        db.run(
-          DBIO.seq(
-            users.schema.dropIfExists,
-            users.schema.createIfNotExists
-          )
-        )
-      }
-    }.fork
-    dbUpdateResult <- updateFork.await
-  } yield dbUpdateResult match {
-    case Exit.Success(_) => ZIO.succeed(println("Database Initialization complete")) *> ZIO.from(db)
-    case Exit.Failure(cause) =>
-      ZIO.succeed(println(s"Database Initialization errored, ${cause.failures}")) *> ZIO.fail(
-        new Exception("Failed to initialize")
-      )
-  }).flatMap(x => x)
+  def migrate(cfg: FlywayConfig): Task[Unit] =
+    ZIO.attempt {
+      Flyway
+        .configure()
+        .dataSource(cfg.url, cfg.user, cfg.password)
+        .locations(cfg.locations: _*) // ✅ FIXED
+        .baselineOnMigrate(cfg.baselineOnMigrate)
+        .validateOnMigrate(cfg.validateOnMigrate)
+        .load()
+        .migrate()
+    }.unit
+
+  val program: ZIO[FlywayConfig, Throwable, Unit] =
+    for {
+      cfg <- ZIO.service[FlywayConfig]
+      _ <- ZIO.logInfo(s"Flyway config loaded: $cfg")
+      _ <- migrate(cfg)
+    } yield ()
 }
 
 object Application extends ZIOAppDefault {
   import DatabaseConfiguration._
 
-  private val routes: Routes[Database, Nothing] = new Controller(dbZIO).routes
-  override def run: ZIO[ZIOAppArgs & Scope, Any, Any] =
-    initializeDB *> Server.serve(routes).provide(Server.default, ZLayer.fromZIO(dbZIO))
+  private val routes: Routes[Any, Nothing] =
+    new Controller().routes
+
+  override val bootstrap: ZLayer[Any, Nothing, Any] =
+    Runtime.setConfigProvider(
+      TypesafeConfigProvider.fromResourcePath()
+    )
+
+  override def run =
+    (program *> Server.serve(routes))
+      .provide(
+        FlywayConfigLayer.live,
+        Server.default
+      )
 }

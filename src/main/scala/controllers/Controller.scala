@@ -2,13 +2,14 @@ package controllers
 
 import repositories.UserRepository
 import slick.jdbc.PostgresProfile.api.*
+import utility.FlywayConfig
 import zio.http.*
 import zio.*
 
-class Controller(db: ZIO[Any, Throwable, Database]) {
-  private val userRepository = new UserRepository(db)
+class Controller() {
+  private val userRepository = new UserRepository()
   private val uc = new UserController(userRepository)
-  val routes: Routes[Database, Nothing] = Routes(
+  val routes: Routes[Any, Nothing] = Routes(
     Method.POST / "api" / "v1" / "user" -> handler { (req: Request) =>
       uc.createUser(req.body)
     },
